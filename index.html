@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#1a3a5c">
+  <title>WHP Site Check-in</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f4f4f0;
+      min-height: 100vh;
+      color: #1a1a1a;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: #1a3a5c;
+      padding: 20px 20px 16px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-logo { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.65); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+    .header-title { font-size: 20px; font-weight: 600; color: #fff; }
+
+    /* ── Tabs ── */
+    .tab-row { display: flex; background: #fff; border-bottom: 1px solid #e5e5e0; }
+    .tab { flex: 1; padding: 14px 10px; text-align: center; font-size: 14px; font-weight: 600; color: #888; border-bottom: 3px solid transparent; cursor: pointer; transition: color 0.15s; }
+    .tab.active { color: #1a3a5c; border-bottom-color: #1a3a5c; }
+
+    /* ── Main content ── */
+    .pane { padding: 20px; display: none; }
+    .pane.active { display: block; }
+
+    /* ── Section label ── */
+    .label { font-size: 11px; font-weight: 700; color: #888; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+
+    /* ── Permit selector ── */
+    .permit-select {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 16px;
+      font-weight: 500;
+      border: 1px solid #d0d0c8;
+      border-radius: 12px;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%23888' stroke-width='1.5'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 14px center;
+      -webkit-appearance: none;
+      appearance: none;
+      color: #1a1a1a;
+      margin-bottom: 16px;
+    }
+    .permit-select:focus { outline: none; border-color: #1a3a5c; }
+
+    /* ── Status card ── */
+    .status-card {
+      background: #fff;
+      border: 1px solid #e5e5e0;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: #bbb; }
+    .status-dot.on { background: #3B6D11; }
+    .status-text { font-size: 14px; color: #555; }
+    .status-text strong { color: #1a1a1a; }
+
+    /* ── Action buttons ── */
+    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+    .action-btn {
+      border: none;
+      border-radius: 16px;
+      padding: 22px 12px;
+      cursor: pointer;
+      text-align: center;
+      transition: transform 0.1s, opacity 0.1s;
+      -webkit-appearance: none;
+    }
+    .action-btn:active { transform: scale(0.97); }
+    .action-btn.disabled { opacity: 0.35; pointer-events: none; }
+    .action-btn-icon { width: 40px; height: 40px; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; }
+    .action-btn-label { font-size: 14px; font-weight: 700; }
+    .action-btn-sub { font-size: 11px; margin-top: 4px; opacity: 0.75; }
+
+    .btn-start { background: #EAF3DE; }
+    .btn-start .action-btn-icon { background: #3B6D11; }
+    .btn-start .action-btn-label { color: #27500A; }
+    .btn-start .action-btn-sub { color: #3B6D11; }
+
+    .btn-finish { background: #FAECE7; }
+    .btn-finish .action-btn-icon { background: #993C1D; }
+    .btn-finish .action-btn-label { color: #712B13; }
+    .btn-finish .action-btn-sub { color: #993C1D; }
+
+    /* ── Dashboard ── */
+    .dash-empty { text-align: center; padding: 40px 20px; color: #aaa; font-size: 15px; }
+    .dash-card {
+      background: #fff;
+      border: 1px solid #e5e5e0;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .dash-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .dash-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dash-permit-ref { font-size: 15px; font-weight: 700; flex: 1; }
+    .dash-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 99px; }
+    .badge-on { background: #EAF3DE; color: #27500A; }
+    .badge-done { background: #f0f0ea; color: #666; }
+    .dash-card-detail { font-size: 13px; color: #777; display: flex; gap: 16px; flex-wrap: wrap; }
+
+    /* ── Overlay / sheet ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      align-items: flex-end;
+    }
+    .overlay.show { display: flex; }
+
+    .sheet {
+      background: #fff;
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+    .sheet-handle { width: 40px; height: 4px; background: #ddd; border-radius: 2px; margin: 12px auto 0; }
+    .sheet-header { padding: 16px 20px 14px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .sheet-icon { width: 36px; height: 36px; border-radius: 50%; background: #FAECE7; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .sheet-title { font-size: 17px; font-weight: 700; }
+    .sheet-sub { font-size: 13px; color: #888; }
+
+    /* Progress pips */
+    .progress-row { display: flex; gap: 5px; padding: 12px 20px 0; flex-shrink: 0; }
+    .pip { flex: 1; height: 4px; border-radius: 2px; background: #e5e5e0; transition: background 0.3s; }
+    .pip.done { background: #3B6D11; }
+    .pip.active { background: #1a3a5c; }
+
+    .sheet-body { flex: 1; overflow-y: auto; padding: 16px 20px; -webkit-overflow-scrolling: touch; }
+    .sheet-footer { padding: 12px 20px 28px; border-top: 1px solid #eee; flex-shrink: 0; display: flex; gap: 10px; }
+
+    /* ── Form elements ── */
+    .block-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .badge-req { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: #FAECE7; color: #993C1D; }
+    .badge-opt { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: #f0f0ea; color: #888; }
+
+    /* Photo cards */
+    .photo-card { background: #f8f8f5; border: 1px solid #e5e5e0; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+    .photo-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .photo-icon { width: 30px; height: 30px; border-radius: 8px; background: #FAECE7; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .photo-name { font-size: 13px; font-weight: 700; }
+    .photo-hint { font-size: 11px; color: #888; }
+    .photo-btn {
+      width: 100%;
+      padding: 11px;
+      border-radius: 10px;
+      border: 2px dashed #ccc;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #888;
+      -webkit-appearance: none;
+    }
+    .photo-btn.captured { border-style: solid; border-color: #3B6D11; background: #EAF3DE; color: #3B6D11; }
+    .photo-preview-wrap { position: relative; margin-top: 8px; }
+    .photo-preview { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; display: block; }
+    .photo-remove-btn { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.6); border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    input[type="file"] { display: none; }
+
+    /* Reinstatement cards */
+    .reinst-card { background: #f8f8f5; border: 1px solid #e5e5e0; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+    .reinst-card-header { display: flex; align-items: center; gap: 10px; }
+    .reinst-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .reinst-name { font-size: 14px; font-weight: 700; }
+    .reinst-hint { font-size: 11px; color: #888; }
+    .toggle-wrap { position: relative; width: 44px; height: 24px; flex-shrink: 0; margin-left: auto; }
+    .toggle-wrap input { opacity: 0; width: 0; height: 0; }
+    .toggle-track { position: absolute; inset: 0; background: #ccc; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+    .toggle-track:before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    input:checked ~ .toggle-track { background: #3B6D11; }
+    input:checked ~ .toggle-track:before { transform: translateX(20px); }
+    .dim-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .dim-field-label { font-size: 11px; color: #888; font-weight: 600; display: block; margin-bottom: 4px; text-align: center; }
+    .dim-input {
+      width: 100%;
+      padding: 10px 6px;
+      border: 1px solid #d0d0c8;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a1a1a;
+      background: #fff;
+      text-align: center;
+      font-family: inherit;
+      -webkit-appearance: none;
+    }
+    .dim-input:focus { outline: none; border-color: #1a3a5c; }
+    .dim-input::placeholder { color: #bbb; font-weight: 400; }
+    .dim-unit { font-size: 10px; color: #aaa; text-align: center; margin-top: 3px; }
+    .dim-fields-wrap { display: none; }
+    .dim-fields-wrap.visible { display: block; }
+
+    /* Notes */
+    .notes-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #d0d0c8;
+      border-radius: 12px;
+      font-size: 15px;
+      color: #1a1a1a;
+      background: #fff;
+      resize: none;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+    .notes-input:focus { outline: none; border-color: #1a3a5c; }
+
+    /* Footer buttons */
+    .btn-back {
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 1px solid #d0d0c8;
+      background: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      white-space: nowrap;
+      -webkit-appearance: none;
+    }
+    .btn-next {
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #ccc;
+      color: #888;
+      transition: background 0.2s, color 0.2s;
+      -webkit-appearance: none;
+    }
+    .btn-next.ready { background: #1a3a5c; color: #fff; }
+    .btn-next:disabled { cursor: not-allowed; }
+
+    /* Success screen */
+    .success-sheet {
+      padding: 48px 28px 40px;
+      text-align: center;
+    }
+    .success-icon { width: 72px; height: 72px; border-radius: 50%; background: #EAF3DE; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; }
+    .success-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .success-detail { font-size: 15px; color: #666; line-height: 1.7; margin-bottom: 20px; }
+    .summary-pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 28px; }
+    .summary-pill { font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 99px; background: #EAF3DE; color: #27500A; }
+    .btn-done { width: 100%; padding: 16px; border-radius: 14px; border: none; font-size: 16px; font-weight: 700; cursor: pointer; background: #1a3a5c; color: #fff; }
+
+    /* Spinner */
+    .spinner { display: none; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1a1a1a;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 99px;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 999;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Error state */
+    .error-banner { background: #FAECE7; border: 1px solid #f5c4b3; border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #712B13; margin-bottom: 14px; display: none; }
+    .error-banner.show { display: block; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-logo">WHP Telecoms</div>
+    <div class="header-title">Site check-in</div>
+  </div>
+
+  <div class="tab-row">
+    <div class="tab active" onclick="showTab('checkin')" id="tab-checkin">Check in/out</div>
+    <div class="tab" onclick="showTab('dashboard')" id="tab-dashboard">Today's log</div>
+  </div>
+
+  <!-- ── Check in/out pane ── -->
+  <div class="pane active" id="pane-checkin">
+    <div class="label">Permit reference</div>
+    <select class="permit-select" id="permit-select" onchange="onPermitChange()">
+      <option value="">Select permit...</option>
+      <!-- PERMIT LIST: Add or edit permit references here -->
+      <option>EYK-2026-0041</option>
+      <option>EYK-2026-0055</option>
+      <option>EYK-2026-0062</option>
+      <option>EYK-2026-0078</option>
+    </select>
+
+    <div class="status-card">
+      <div class="status-dot" id="status-dot"></div>
+      <div class="status-text" id="status-text">No permit selected</div>
+    </div>
+
+    <div class="action-grid">
+      <button class="action-btn btn-start disabled" id="btn-start" onclick="doStart()">
+        <div class="action-btn-icon">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.2"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l2.5 2.5"/></svg>
+        </div>
+        <div class="action-btn-label">Start on site</div>
+        <div class="action-btn-sub">Log arrival time</div>
+      </button>
+      <button class="action-btn btn-finish disabled" id="btn-finish" onclick="openFinish()">
+        <div class="action-btn-icon">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.2"><circle cx="10" cy="10" r="8"/><path d="M7 10l2.5 2.5L14 8"/></svg>
+        </div>
+        <div class="action-btn-label">Finish on site</div>
+        <div class="action-btn-sub">Photos + dimensions</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Today's log pane ── -->
+  <div class="pane" id="pane-dashboard">
+    <div class="label">Today — <span id="today-date"></span></div>
+    <div id="dash-list">
+      <div class="dash-empty">No activity logged today</div>
+    </div>
+  </div>
+
+  <!-- ── Finish overlay ── -->
+  <div class="overlay" id="finish-overlay">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div class="sheet-icon">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#993C1D" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M7 10l2.5 2.5L14 8"/></svg>
+        </div>
+        <div>
+          <div class="sheet-title">Finish on site</div>
+          <div class="sheet-sub" id="finish-permit-label">—</div>
+        </div>
+      </div>
+      <div class="progress-row">
+        <div class="pip active" id="pip-1"></div>
+        <div class="pip" id="pip-2"></div>
+        <div class="pip" id="pip-3"></div>
+      </div>
+
+      <div class="sheet-body">
+        <div class="error-banner" id="error-banner"></div>
+
+        <!-- Step 1: Photos -->
+        <div id="step-1">
+          <div class="block-label">Site photos <span class="badge-req">Required</span></div>
+
+          <div class="photo-card">
+            <div class="photo-card-header">
+              <div class="photo-icon">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#993C1D" stroke-width="1.8"><path d="M3 5.5A1.5 1.5 0 0 1 4.5 4h.79l.85-1.7A1 1 0 0 1 7.04 2h5.92a1 1 0 0 1 .894.553L14.71 4h.79A1.5 1.5 0 0 1 17 5.5v9A1.5 1.5 0 0 1 15.5 16h-11A1.5 1.5 0 0 1 3 14.5z"/><circle cx="10" cy="10" r="2.5"/></svg>
+              </div>
+              <div>
+                <div class="photo-name">Site clearance</div>
+                <div class="photo-hint">Excavation reinstated, area clear of materials</div>
+              </div>
+            </div>
+            <label>
+              <div class="photo-btn" id="clearance-btn">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 7.5A1.5 1.5 0 0 1 3.5 6h.79l.85-1.7A1 1 0 0 1 6.04 4h7.92a1 1 0 0 1 .894.553L15.71 6h.79A1.5 1.5 0 0 1 18 7.5v8A1.5 1.5 0 0 1 16.5 17h-13A1.5 1.5 0 0 1 2 15.5z"/><circle cx="10" cy="11" r="2.5"/></svg>
+                <span id="clearance-btn-text">Take photo</span>
+              </div>
+              <input type="file" accept="image/*" capture="environment" id="clearance-input" onchange="handlePhoto('clearance', this)">
+            </label>
+            <div class="photo-preview-wrap" id="clearance-preview-wrap" style="display:none">
+              <img class="photo-preview" id="clearance-img" src="" alt="Site clearance">
+              <button class="photo-remove-btn" onclick="removePhoto('clearance')">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2"><path d="M2 2l8 8M10 2l-8 8"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="photo-card">
+            <div class="photo-card-header">
+              <div class="photo-icon">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#993C1D" stroke-width="1.8"><path d="M3 5.5A1.5 1.5 0 0 1 4.5 4h.79l.85-1.7A1 1 0 0 1 7.04 2h5.92a1 1 0 0 1 .894.553L14.71 4h.79A1.5 1.5 0 0 1 17 5.5v9A1.5 1.5 0 0 1 15.5 16h-11A1.5 1.5 0 0 1 3 14.5z"/><circle cx="10" cy="10" r="2.5"/></svg>
+              </div>
+              <div>
+                <div class="photo-name">Traffic management removed</div>
+                <div class="photo-hint">All signs, cones and barriers cleared</div>
+              </div>
+            </div>
+            <label>
+              <div class="photo-btn" id="tm-btn">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 7.5A1.5 1.5 0 0 1 3.5 6h.79l.85-1.7A1 1 0 0 1 6.04 4h7.92a1 1 0 0 1 .894.553L15.71 6h.79A1.5 1.5 0 0 1 18 7.5v8A1.5 1.5 0 0 1 16.5 17h-13A1.5 1.5 0 0 1 2 15.5z"/><circle cx="10" cy="11" r="2.5"/></svg>
+                <span id="tm-btn-text">Take photo</span>
+              </div>
+              <input type="file" accept="image/*" capture="environment" id="tm-input" onchange="handlePhoto('tm', this)">
+            </label>
+            <div class="photo-preview-wrap" id="tm-preview-wrap" style="display:none">
+              <img class="photo-preview" id="tm-img" src="" alt="TM removed">
+              <button class="photo-remove-btn" onclick="removePhoto('tm')">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2"><path d="M2 2l8 8M10 2l-8 8"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Reinstatement dimensions -->
+        <div id="step-2" style="display:none">
+          <div class="block-label">Reinstatement dimensions <span class="badge-req">At least one required</span></div>
+
+          <!-- Verge -->
+          <div class="reinst-card">
+            <div class="reinst-card-header">
+              <div class="reinst-icon" style="background:#E6F1FB;">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#185FA5" stroke-width="1.8"><rect x="2" y="6" width="16" height="8" rx="1"/><path d="M2 9h16"/></svg>
+              </div>
+              <div style="flex:1;">
+                <div class="reinst-name">Verge</div>
+                <div class="reinst-hint">Grass / soft strip</div>
+              </div>
+              <label class="toggle-wrap">
+                <input type="checkbox" id="toggle-verge" onchange="toggleDims('verge')">
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="dim-fields-wrap" id="dims-verge">
+              <div class="dim-fields">
+                <div>
+                  <span class="dim-field-label">Length</span>
+                  <input type="number" inputmode="decimal" min="0" step="0.01" class="dim-input" id="verge-l" placeholder="0.00">
+                  <div class="dim-unit">metres</div>
+                </div>
+                <div>
+                  <span class="dim-field-label">Width</span>
+                  <input type="number" inputmode="decimal" min="0" step="0.01" class="dim-input" id="verge-w" placeholder="0.00">
+                  <div class="dim-unit">metres</div>
+                </div>
+                <div>
+                  <span class="dim-field-label">Depth</span>
+                  <input type="number" inputmode="decimal" min="0" step="0.01" class="dim-input" id="verge-d" placeholder="0.00">
+                  <div class="dim-unit">metres</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footway -->
+          <div class="reinst-card">
+            <div class="reinst-card-header">
+              <div class="reinst-icon" style="background:#EEEDFE;">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#534AB7" stroke-width="1.8"><rect x="2" y="4" width="16" height="12" rx="1"/><path d="M6 4v12M14 4v12"/></svg>
+              </div>
+              <div style="flex:1;">
+                <div class="reinst-name">Footway</div>
+                <div class="reinst-hint">Footpath / pavement</div>
+              </div>
+              <label class="toggle-wrap">
+                <input type="checkbox" id="toggle-footway" onchange="toggleDims('footway')">
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="dim-fields-wrap" id="dims-footway">
+              <div class="dim-fields">
+                <div>
+                  <span class="dim-field-label">Length</span>
+                  <input type="number" inputmode="decimal" min="0" step="0.01" class="dim-input" id="footway-l" placeholder="0.00">
+                  <div class="dim-unit">metres</div>
+                </div>
+                <div>
+                  <span class="dim-field-label">Width</span>
+                  <input type="number" inputmode="decimal" min="0" step="0.01" class="dim-input" id="footway-w" placeholder="0.00">
+                  <div class="dim-unit">metres</div>
+                </div>
+                <div>
+                  <span class="dim-field-label">Depth</span>
+                  <input type="number" inputmode="decimal" min="0" step="0.01" class="dim-input" id="footway-d" placeholder="0.00">
+                  <div class="dim-unit">metres</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carriageway -->
+          <div class="reinst-card">
+            <div class="reinst-card-header">
+              <div class="reinst-icon" style="background:#F1EFE8;">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#5F5E5A" stroke-width="1.8"><rect x="2" y="4" width="16" height="12" rx="1"/><path d="M10 4v12M2 10h16"/></svg>
+              </div>
+              <div style="flex:1;">
+                <div class="reinst-name">Carriageway</div>
+                <div class="reinst-hint">Road surface</div>
+              </div>
+              <label class="toggle-wrap">
+                <input type="checkbox" id="toggle-carriageway" onchange="toggleDims('carriageway')">
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="dim-fields-wrap" id="dims-carriageway">
+              <div class="dim-fields">
+                <div>
+                  <span class="dim-field-label">Length</span>
+                  <input type="number" inputmode="decimal" min="0" step="0.01" class="dim-input" id="carriageway-l" placeholder="0.00">
+                  <div class="dim-unit">metres</div>
+                </div>
+                <div>
+                  <span class="dim-field-label">Width</span>
+                  <input type="number" inputmode="decimal" min="0" step="0.01" class="dim-input" id="carriageway-w" placeholder="0.00">
+                  <div class="dim-unit">metres</div>
+                </div>
+                <div>
+                  <span class="dim-field-label">Depth</span>
+                  <input type="number" inputmode="decimal" min="0" step="0.01" class="dim-input" id="carriageway-d" placeholder="0.00">
+                  <div class="dim-unit">metres</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Notes -->
+        <div id="step-3" style="display:none">
+          <div class="block-label">Notes <span class="badge-opt">Optional</span></div>
+          <textarea class="notes-input" id="finish-notes" rows="5"
+            placeholder="Any issues, defects or observations about the reinstatement…"></textarea>
+        </div>
+
+      </div>
+
+      <div class="sheet-footer">
+        <button class="btn-back" id="btn-back" onclick="stepBack()" style="display:none;">Back</button>
+        <button class="btn-next disabled" id="btn-next" onclick="stepNext()" disabled>Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Success overlay ── -->
+  <div class="overlay" id="success-overlay">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="success-sheet">
+        <div class="success-icon">
+          <svg width="36" height="36" viewBox="0 0 20 20" fill="none" stroke="#3B6D11" stroke-width="2.2"><circle cx="10" cy="10" r="8"/><path d="M6.5 10l2.5 2.5L14 7.5"/></svg>
+        </div>
+        <div class="success-title">Site signed off</div>
+        <div class="success-detail">
+          <strong id="success-permit"></strong><br>
+          Finished at <span id="success-time"></span>
+        </div>
+        <div class="summary-pills" id="summary-pills"></div>
+        <button class="btn-done" onclick="closeDone()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ─────────────────────────────────────────────────
+    // CONFIGURATION — update this URL after deploying
+    // your Google Apps Script web app
+    // ─────────────────────────────────────────────────
+    const APPS_SCRIPT_URL = https://script.google.com/macros/s/AKfycbxGQ6fVI9xgkjqEp-DgjQ_Fg3lGCjgbN-a9Pk4FMTJZTT5TjtHzZ2zKu8JerhNGFfglBQ/exec;
+
+    // ── State ──
+    let selectedPermit = '';
+    let permitState    = {};   // permit -> 'on' | 'done'
+    let startTimes     = {};
+    let log            = [];
+    let photos         = { clearance: null, tm: null };
+    let currentStep    = 1;
+    let submitting     = false;
+
+    // ── Helpers ──
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function timeNow() {
+      const n = new Date();
+      return pad(n.getHours()) + ':' + pad(n.getMinutes());
+    }
+    function dateLabel() {
+      return new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    }
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    }
+    function showError(msg) {
+      const el = document.getElementById('error-banner');
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+    function hideError() {
+      document.getElementById('error-banner').classList.remove('show');
+    }
+
+    // ── Tabs ──
+    function showTab(tab) {
+      ['checkin','dashboard'].forEach(t => {
+        document.getElementById('pane-' + t).classList.toggle('active', t === tab);
+        document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+      });
+      if (tab === 'dashboard') renderDashboard();
+    }
+
+    // ── Permit change ──
+    function onPermitChange() {
+      selectedPermit = document.getElementById('permit-select').value;
+      updateButtons();
+    }
+
+    function updateButtons() {
+      const isOn   = selectedPermit && permitState[selectedPermit] === 'on';
+      const isDone = selectedPermit && permitState[selectedPermit] === 'done';
+      const has    = !!selectedPermit;
+
+      const startBtn  = document.getElementById('btn-start');
+      const finishBtn = document.getElementById('btn-finish');
+      const dot       = document.getElementById('status-dot');
+      const txt       = document.getElementById('status-text');
+
+      startBtn.classList.toggle('disabled',  !has || isOn || isDone);
+      finishBtn.classList.toggle('disabled', !has || !isOn);
+
+      if (!has) {
+        dot.className = 'status-dot';
+        txt.innerHTML = 'No permit selected';
+      } else if (isDone) {
+        dot.className = 'status-dot';
+        txt.innerHTML = '<strong>' + selectedPermit + '</strong> — signed off ✓';
+      } else if (isOn) {
+        dot.className = 'status-dot on';
+        txt.innerHTML = '<strong>On site</strong> — ' + selectedPermit + ' since ' + (startTimes[selectedPermit] || '—');
+      } else {
+        dot.className = 'status-dot';
+        txt.innerHTML = '<strong>' + selectedPermit + '</strong> — not checked in';
+      }
+    }
+
+    // ── Start on site ──
+    function doStart() {
+      if (!selectedPermit || permitState[selectedPermit]) return;
+      const t = timeNow();
+      permitState[selectedPermit] = 'on';
+      startTimes[selectedPermit]  = t;
+
+      // Send to Apps Script (fire & forget — low stakes for start event)
+      if (APPS_SCRIPT_URL !== 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
+        fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'start',
+            permit: selectedPermit,
+            startTime: t,
+            date: new Date().toLocaleDateString('en-GB')
+          })
+        }).catch(() => {}); // silent — data captured on finish anyway
+      }
+
+      log.push({ permit: selectedPermit, startTime: t, status: 'on' });
+      updateButtons();
+      showToast('Checked in — ' + selectedPermit);
+    }
+
+    // ── Finish flow ──
+    function openFinish() {
+      if (!selectedPermit || permitState[selectedPermit] !== 'on') return;
+      currentStep = 1;
+      photos = { clearance: null, tm: null };
+
+      // Reset photos
+      ['clearance','tm'].forEach(k => {
+        document.getElementById(k + '-preview-wrap').style.display = 'none';
+        document.getElementById(k + '-btn').className = 'photo-btn';
+        document.getElementById(k + '-btn-text').textContent = 'Take photo';
+        document.getElementById(k + '-input').value = '';
+      });
+
+      // Reset dims
+      ['verge','footway','carriageway'].forEach(s => {
+        document.getElementById('toggle-' + s).checked = false;
+        document.getElementById('dims-' + s).classList.remove('visible');
+        ['l','w','d'].forEach(f => { document.getElementById(s + '-' + f).value = ''; });
+      });
+
+      document.getElementById('finish-notes').value = '';
+      document.getElementById('finish-permit-label').textContent = selectedPermit;
+      hideError();
+      renderStep();
+
+      document.getElementById('finish-overlay').classList.add('show');
+    }
+
+    function renderStep() {
+      [1,2,3].forEach(i => {
+        document.getElementById('step-' + i).style.display = i === currentStep ? 'block' : 'none';
+        const pip = document.getElementById('pip-' + i);
+        pip.className = 'pip' + (i < currentStep ? ' done' : i === currentStep ? ' active' : '');
+      });
+      document.getElementById('btn-back').style.display = currentStep === 1 ? 'none' : 'block';
+      document.getElementById('btn-next').textContent   = currentStep < 3 ? 'Next' : 'Submit sign-off';
+      document.getElementById('sheet-body').scrollTop  = 0;
+      hideError();
+      checkNext();
+    }
+
+    function checkNext() {
+      let ready = false;
+      if (currentStep === 1) ready = !!(photos.clearance && photos.tm);
+      if (currentStep === 2) ready = ['verge','footway','carriageway'].some(s => document.getElementById('toggle-' + s).checked);
+      if (currentStep === 3) ready = true;
+      const btn = document.getElementById('btn-next');
+      btn.disabled = !ready;
+      btn.className = 'btn-next' + (ready ? ' ready' : ' disabled');
+    }
+
+    function stepNext() {
+      if (submitting) return;
+      if (currentStep < 3) { currentStep++; renderStep(); }
+      else submitFinish();
+    }
+    function stepBack() {
+      if (currentStep > 1) { currentStep--; renderStep(); }
+      else {
+        document.getElementById('finish-overlay').classList.remove('show');
+      }
+    }
+
+    // ── Photos ──
+    function handlePhoto(key, input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      // Resize before storing to keep payload manageable
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX = 1200;
+          let w = img.width, h = img.height;
+          if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          photos[key] = dataUrl;
+          document.getElementById(key + '-img').src = dataUrl;
+          document.getElementById(key + '-preview-wrap').style.display = 'block';
+          document.getElementById(key + '-btn').className = 'photo-btn captured';
+          document.getElementById(key + '-btn-text').textContent = 'Photo taken — tap to retake';
+          checkNext();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removePhoto(key) {
+      photos[key] = null;
+      document.getElementById(key + '-preview-wrap').style.display = 'none';
+      document.getElementById(key + '-btn').className = 'photo-btn';
+      document.getElementById(key + '-btn-text').textContent = 'Take photo';
+      document.getElementById(key + '-input').value = '';
+      checkNext();
+    }
+
+    // ── Reinstatement toggles ──
+    function toggleDims(s) {
+      const on = document.getElementById('toggle-' + s).checked;
+      document.getElementById('dims-' + s).classList.toggle('visible', on);
+      if (!on) ['l','w','d'].forEach(f => { document.getElementById(s + '-' + f).value = ''; });
+      checkNext();
+    }
+
+    function getDimString(s) {
+      const l = document.getElementById(s + '-l').value;
+      const w = document.getElementById(s + '-w').value;
+      const d = document.getElementById(s + '-d').value;
+      return l || w || d ? `${l||'—'}m × ${w||'—'}m × ${d||'—'}m deep` : null;
+    }
+
+    // ── Submit ──
+    async function submitFinish() {
+      if (submitting) return;
+      submitting = true;
+
+      const btn = document.getElementById('btn-next');
+      btn.innerHTML = '<div class="spinner" style="display:block;"></div>';
+      btn.disabled = true;
+      hideError();
+
+      const finishTime = timeNow();
+      const startTime  = startTimes[selectedPermit] || '—';
+      const date       = new Date().toLocaleDateString('en-GB');
+      const notes      = document.getElementById('finish-notes').value.trim();
+
+      const dims = {};
+      ['verge','footway','carriageway'].forEach(s => {
+        if (document.getElementById('toggle-' + s).checked) {
+          dims[s] = {
+            length: document.getElementById(s + '-l').value || '',
+            width:  document.getElementById(s + '-w').value || '',
+            depth:  document.getElementById(s + '-d').value || ''
+          };
+        }
+      });
+
+      const payload = {
+        action:      'finish',
+        permit:      selectedPermit,
+        date,
+        startTime,
+        finishTime,
+        dims,
+        notes,
+        photoSiteClearance: photos.clearance,
+        photoTMRemoved:     photos.tm
+      };
+
+      try {
+        if (APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
+          // Demo mode — simulate success
+          await new Promise(r => setTimeout(r, 1000));
+        } else {
+          const res = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const json = await res.json();
+          if (!json.success) throw new Error(json.error || 'Submission failed');
+        }
+
+        // Success
+        permitState[selectedPermit] = 'done';
+        const entry = log.find(e => e.permit === selectedPermit && e.status === 'on');
+        if (entry) { entry.finishTime = finishTime; entry.status = 'done'; entry.dims = dims; }
+
+        document.getElementById('success-permit').textContent = selectedPermit;
+        document.getElementById('success-time').textContent   = finishTime;
+
+        const pills = document.getElementById('summary-pills');
+        pills.innerHTML = '<div class="summary-pill">2 photos uploaded</div>';
+        Object.entries(dims).forEach(([s, d]) => {
+          const dim = [d.length, d.width, d.depth].filter(Boolean).join(' × ');
+          pills.innerHTML += `<div class="summary-pill">${s.charAt(0).toUpperCase()+s.slice(1)}: ${dim || 'recorded'}</div>`;
+        });
+
+        document.getElementById('finish-overlay').classList.remove('show');
+        document.getElementById('success-overlay').classList.add('show');
+        updateButtons();
+
+      } catch (err) {
+        showError('Could not submit — check your connection and try again.');
+        btn.innerHTML = 'Submit sign-off';
+        btn.className = 'btn-next ready';
+        btn.disabled = false;
+      } finally {
+        submitting = false;
+      }
+    }
+
+    function closeDone() {
+      document.getElementById('success-overlay').classList.remove('show');
+      showToast('Sign-off recorded ✓');
+    }
+
+    // ── Dashboard ──
+    function renderDashboard() {
+      document.getElementById('today-date').textContent = dateLabel();
+      const list = document.getElementById('dash-list');
+      if (!log.length) {
+        list.innerHTML = '<div class="dash-empty">No activity logged today</div>';
+        return;
+      }
+      list.innerHTML = log.map(e => {
+        const isOn   = e.status === 'on';
+        const dotClr = isOn ? '#3B6D11' : '#aaa';
+        const badge  = isOn
+          ? '<span class="dash-badge badge-on">On site</span>'
+          : '<span class="dash-badge badge-done">Complete</span>';
+        const time   = isOn
+          ? 'Started ' + e.startTime
+          : e.startTime + ' → ' + (e.finishTime || '—');
+        return `
+          <div class="dash-card">
+            <div class="dash-card-top">
+              <div class="dash-dot" style="background:${dotClr}"></div>
+              <div class="dash-permit-ref">${e.permit}</div>
+              ${badge}
+            </div>
+            <div class="dash-card-detail">
+              <span>${time}</span>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ── Init ──
+    document.getElementById('today-date').textContent = dateLabel();
+  </script>
+</body>
+</html>
