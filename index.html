@@ -334,14 +334,14 @@
     </div>
 
     <div class="action-grid">
-      <button class="action-btn btn-start disabled" id="btn-start" onclick="doStart()">
+
         <div class="action-btn-icon">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.2"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l2.5 2.5"/></svg>
         </div>
         <div class="action-btn-label">Start on site</div>
         <div class="action-btn-sub">Log arrival time</div>
       </button>
-      <button class="action-btn btn-finish disabled" id="btn-finish" onclick="openFinish()">
+      <button class="action-btn btn-finish" id="btn-finish" onclick="openFinish()">
         <div class="action-btn-icon">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.2"><circle cx="10" cy="10" r="8"/><path d="M7 10l2.5 2.5L14 8"/></svg>
         </div>
@@ -651,8 +651,12 @@
       const dot       = document.getElementById('status-dot');
       const txt       = document.getElementById('status-text');
 
-      startBtn.classList.toggle('disabled',  !has || isOn || isDone);
-      finishBtn.classList.toggle('disabled', !has || !isOn);
+      // Explicitly set/remove disabled rather than toggle to avoid state mismatch
+      if (!has || isOn || isDone) { startBtn.classList.add('disabled'); }
+      else { startBtn.classList.remove('disabled'); }
+
+      if (!has || !isOn) { finishBtn.classList.add('disabled'); }
+      else { finishBtn.classList.remove('disabled'); }
 
       if (!has) {
         dot.className = 'status-dot';
@@ -930,6 +934,7 @@
 
     // ── Init ──
     document.getElementById('today-date').textContent = dateLabel();
+    updateButtons(); // ensure button states are correct on load
   </script>
 </body>
 </html>
